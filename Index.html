@@ -1,0 +1,708 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>The Five Houses</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout concept: a night street of five lit houses. Glass house-cards in a row (scroll-snap on phones), HUD of timer / attempts / progress above, clue ledger that folds away, one big amber finish button below. */
+:root {
+  --bg: #0a0f1f;
+  --bg-deep: #070b17;
+  --ink: #eef1fb;
+  --muted: #98a2c3;
+  --glass: rgba(255, 255, 255, 0.055);
+  --glass-strong: rgba(255, 255, 255, 0.09);
+  --line: rgba(255, 255, 255, 0.12);
+  --amber: #f6b94f;
+  --amber-deep: #ff8a4c;
+  --teal: #5fd3c5;
+  --bad: #ff7070;
+  --good: #5fe3a1;
+  --display: 'Bricolage Grotesque', 'Avenir Next', 'Segoe UI', sans-serif;
+  --body: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--body);
+  padding-block: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+.glow {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 12% -8%, rgba(95, 211, 197, 0.14), transparent 60%),
+    radial-gradient(800px 560px at 100% 8%, rgba(246, 185, 79, 0.13), transparent 60%),
+    radial-gradient(1200px 700px at 50% 120%, rgba(60, 80, 170, 0.28), transparent 60%),
+    linear-gradient(180deg, #0c1228 0%, #080c1a 100%);
+}
+#root { position: relative; z-index: 1; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 18px 44px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+/* top bar */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.brand { font: 800 15px/1 var(--display); letter-spacing: 0.22em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+.brand i { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+.top-actions { display: flex; gap: 8px; }
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+  background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  padding: 9px 14px; border-radius: 12px; font-weight: 600; font-size: 12.5px; letter-spacing: 0.08em;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
+}
+.btn-ghost:hover { background: var(--glass-strong); border-color: rgba(255,255,255,.22); }
+.btn-ghost:active { transform: scale(0.97); }
+.btn-ghost.icon { padding: 9px 11px; }
+
+/* HUD */
+.hud { display: grid; grid-template-columns: 1fr 1.5fr 1.2fr; gap: 12px; margin-bottom: 14px; }
+.tile {
+  background: var(--glass); border: 1px solid var(--line); border-radius: 18px; padding: 14px 18px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 40px -26px rgba(0, 0, 0, 0.8);
+  min-width: 0;
+}
+.tile .k { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 7px; font-weight: 600; }
+.timer { font: 700 30px/1.1 var(--mono); font-variant-numeric: tabular-nums; margin-top: 6px; }
+.att-l { font: 700 12.5px/1.2 var(--body); letter-spacing: 0.14em; color: var(--muted); }
+.att-l b { font: 800 28px/1 var(--display); color: var(--amber); letter-spacing: 0; margin-left: 6px; vertical-align: -3px; }
+.pips { display: flex; gap: 8px; margin-top: 10px; }
+.pip { height: 8px; flex: 1; border-radius: 6px; background: var(--amber); box-shadow: 0 0 14px rgba(246,185,79,.55); transition: background .4s, box-shadow .4s; }
+.pip.off { background: rgba(255,255,255,.12); box-shadow: none; }
+.prog-n { font: 700 24px/1.1 var(--mono); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.prog-n span { color: var(--muted); font-size: 15px; }
+.bar { height: 6px; background: rgba(255,255,255,.1); border-radius: 6px; margin-top: 10px; overflow: hidden; }
+.bar > div { height: 100%; background: linear-gradient(90deg, var(--teal), var(--amber)); border-radius: 6px; transition: width .45s cubic-bezier(.2,.8,.2,1); }
+
+/* clues */
+.clues { background: var(--glass); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 18px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.clues-head { width: 100%; background: none; border: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; text-align: left; }
+.clues-head .t { font: 800 16px/1.2 var(--display); letter-spacing: 0.14em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+.clues-head .sub { color: var(--muted); font-size: 12.5px; font-weight: 500; letter-spacing: 0.02em; text-transform: none; font-family: var(--body); }
+.chev { transition: transform .3s; flex: none; }
+.chev.open { transform: rotate(180deg); }
+.clues-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .4s cubic-bezier(.2,.8,.2,1); }
+.clues-body.open { grid-template-rows: 1fr; }
+.clues-body > div { overflow: hidden; min-height: 0; }
+.clue-list { list-style: none; margin: 0; padding: 0 16px 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 8px; }
+.clue {
+  width: 100%; text-align: left; display: flex; gap: 12px; align-items: flex-start;
+  background: rgba(8, 12, 26, 0.45); border: 1px solid transparent; border-radius: 14px; padding: 11px 13px;
+  transition: border-color .2s, opacity .25s, background .2s;
+}
+.clue:hover { border-color: var(--line); }
+.clue .n { font: 700 12px/1 var(--mono); color: var(--amber); background: rgba(246,185,79,.12); border-radius: 8px; min-width: 28px; height: 24px; display: grid; place-items: center; flex: none; margin-top: 1px; }
+.clue .tx { font-size: 14px; line-height: 1.45; min-width: 0; }
+.clue.struck { opacity: .45; }
+.clue.struck .tx { text-decoration: line-through; text-decoration-color: rgba(255,255,255,.4); }
+.clue.struck .n { color: var(--teal); background: rgba(95,211,197,.14); }
+.clues-note { padding: 0 20px 14px; color: var(--muted); font-size: 12.5px; }
+
+/* board */
+.board-wrap { position: relative; }
+.board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; position: relative; }
+.house {
+  background: var(--glass); border: 1px solid var(--line); border-radius: 24px; padding: 14px 12px 14px;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 24px 50px -28px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255,255,255,.07);
+  transition: border-color .35s, box-shadow .35s, transform .35s;
+  animation: rise .7s cubic-bezier(.2,.8,.2,1) both;
+  min-width: 0;
+}
+.house.done { border-color: rgba(246,185,79,.55); box-shadow: 0 24px 60px -26px rgba(246,185,79,.45), inset 0 1px 0 rgba(255,255,255,.07); }
+.house.shake { animation: shake .55s; border-color: rgba(255,112,112,.7); }
+.house-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.house-num { font: 800 13px/1 var(--display); letter-spacing: 0.2em; text-transform: uppercase; }
+.house-num b { font-size: 22px; color: var(--amber); letter-spacing: 0; margin-left: 6px; vertical-align: -2px; }
+.house-count { font: 700 11px/1 var(--mono); color: var(--muted); padding: 5px 8px; border-radius: 20px; background: rgba(255,255,255,.07); transition: background .3s, color .3s; }
+.house.done .house-count { background: rgba(246,185,79,.18); color: var(--amber); }
+.art { display: block; width: 100%; max-width: 150px; margin: 4px auto 8px; overflow: visible; }
+.art .wall, .art .roof, .art .chim { transition: fill .5s; }
+.art .win { transition: fill .5s; }
+.art .lit { animation: flicker 3.2s ease-in-out infinite; }
+.cells { display: grid; gap: 9px; }
+.cell { display: block; }
+.cl { display: flex; align-items: center; gap: 6px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 2px 4px; }
+.sel { position: relative; display: block; }
+.sel select {
+  width: 100%; appearance: none; -webkit-appearance: none; background: rgba(8, 12, 26, 0.6); border: 1px solid var(--line);
+  color: var(--ink); font: 600 14px/1.2 var(--body); padding: 11px 32px 11px 12px; border-radius: 12px; cursor: pointer;
+  transition: border-color .25s, background .25s, box-shadow .25s; text-overflow: ellipsis; min-width: 0;
+}
+.sel select:hover { border-color: rgba(255,255,255,.28); }
+.sel select option { background: #10183a; color: #eef1fb; }
+.sel .ic { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--muted); display: flex; }
+.cell.filled .sel select { border-color: rgba(95,211,197,.55); background: rgba(95,211,197,.09); }
+.cell.filled .sel .ic { color: var(--teal); }
+.cell.flash .sel select { animation: moved 1.1s ease-out; }
+
+.dots { display: none; justify-content: center; gap: 10px; margin: 0 0 12px; }
+.dot { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); font: 700 14px/1 var(--display); display: grid; place-items: center; transition: all .3s; }
+.dot.on { border-color: var(--amber); color: var(--amber); background: rgba(246,185,79,.1); }
+.dot.part { border-color: rgba(95,211,197,.6); }
+
+/* finish */
+.finish-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 26px; }
+.btn-main {
+  position: relative; border: 0; border-radius: 18px; padding: 20px 40px; width: min(100%, 520px);
+  background: linear-gradient(135deg, var(--amber), var(--amber-deep)); color: #1a1205;
+  font: 800 17px/1 var(--display); letter-spacing: .16em; text-transform: uppercase;
+  box-shadow: 0 18px 40px -14px rgba(255, 138, 76, .6), inset 0 1px 0 rgba(255,255,255,.4);
+  transition: transform .2s, box-shadow .2s, filter .2s; display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+}
+.btn-main:hover { transform: translateY(-2px); box-shadow: 0 24px 50px -14px rgba(255, 138, 76, .75), inset 0 1px 0 rgba(255,255,255,.4); filter: brightness(1.05); }
+.btn-main:active { transform: translateY(0) scale(.985); }
+.btn-main.sm { padding: 15px 30px; width: auto; font-size: 14px; }
+.btn-line { border: 1px solid var(--line); background: var(--glass); border-radius: 16px; padding: 15px 28px; font: 700 13.5px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; transition: background .2s, transform .2s; }
+.btn-line:hover { background: var(--glass-strong); }
+.btn-line:active { transform: scale(.98); }
+.hint { color: var(--muted); font-size: 13px; text-align: center; }
+
+/* toast */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 40; max-width: min(92vw, 460px); width: max-content;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  padding: 13px 18px; border-radius: 14px; font-weight: 600; font-size: 14px; display: flex; gap: 10px; align-items: center;
+  background: rgba(20, 28, 58, .92); border: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,.7); animation: toastin .35s cubic-bezier(.2,.8,.2,1);
+}
+.toast.warn { border-color: rgba(246,185,79,.6); }
+.toast.warn svg { color: var(--amber); }
+
+/* modal */
+.scrim { position: fixed; inset: 0; z-index: 60; background: rgba(5, 8, 18, .72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 20px; animation: fade .25s both; }
+.modal {
+  width: min(100%, 440px); text-align: center; padding: 32px 26px 26px; border-radius: 26px;
+  background: linear-gradient(180deg, rgba(34,44,86,.92), rgba(16,22,48,.95)); border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 40px 90px -20px rgba(0,0,0,.8); animation: pop .4s cubic-bezier(.2,1.1,.3,1) both;
+}
+.modal h2 { font: 800 clamp(28px, 7vw, 38px)/1.05 var(--display); margin: 0 0 10px; letter-spacing: .02em; }
+.modal p { color: var(--muted); margin: 0 0 20px; }
+.modal .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.modal .badge { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 16px; background: rgba(255,112,112,.14); color: var(--bad); border: 1px solid rgba(255,112,112,.4); }
+.modal .badge.warn { background: rgba(246,185,79,.14); color: var(--amber); border-color: rgba(246,185,79,.45); }
+.modal .left { display: inline-flex; gap: 8px; align-items: center; font: 700 13px/1 var(--body); letter-spacing: .14em; color: var(--amber); margin-bottom: 22px; }
+
+/* landing */
+.landing { min-height: calc(100vh - 36px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 22px; padding-block: 30px; }
+.street { display: flex; gap: clamp(6px, 2vw, 20px); align-items: flex-end; justify-content: center; margin-bottom: 8px; }
+.street .art { width: clamp(52px, 13vw, 118px); margin: 0; }
+.street .art-wrap { animation: rise .9s cubic-bezier(.2,.8,.2,1) both; }
+.title { font: 800 clamp(44px, 11vw, 112px)/.92 var(--display); letter-spacing: .02em; margin: 0; text-wrap: balance; text-transform: uppercase;
+  background: linear-gradient(180deg, #fff 30%, #b9c3e8 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.title em { font-style: normal; background: linear-gradient(135deg, var(--amber), var(--amber-deep)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { font-size: clamp(16px, 3.4vw, 21px); color: var(--muted); max-width: 30ch; margin: 0; text-wrap: balance; }
+.only { display: inline-flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 40px; border: 1px solid rgba(246,185,79,.5); background: rgba(246,185,79,.08); font: 800 13px/1 var(--display); letter-spacing: .22em; color: var(--amber); }
+.only .pips { margin: 0; gap: 5px; }
+.only .pip { width: 22px; flex: none; }
+.facts { display: flex; gap: 8px 22px; flex-wrap: wrap; justify-content: center; color: var(--muted); font-size: 13px; }
+.facts span b { color: var(--ink); font-family: var(--mono); }
+
+/* result screens */
+.result { display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; padding-block: 28px; }
+.result h1 { font: 800 clamp(46px, 12vw, 104px)/.95 var(--display); margin: 0; text-transform: uppercase; letter-spacing: .02em; }
+.result h1.win { background: linear-gradient(135deg, #fff2c9, var(--amber) 45%, var(--amber-deep)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.result h1.lose { color: var(--bad); }
+.result p.lead { color: var(--muted); font-size: 18px; margin: 0; }
+.stats { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.stat { background: var(--glass); border: 1px solid var(--line); border-radius: 16px; padding: 12px 20px; }
+.stat .k { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.stat .v { font: 700 22px/1.2 var(--mono); }
+.sol { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 8px; text-align: left; }
+.sol .house { animation-delay: 0s; padding: 12px; }
+.sol dl { margin: 0; display: grid; gap: 6px; }
+.sol dl div { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; border-bottom: 1px dashed rgba(255,255,255,.1); padding-bottom: 5px; }
+.sol dl div:last-child { border-bottom: 0; }
+.sol dt { color: var(--muted); display: flex; gap: 6px; align-items: center; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.sol dd { margin: 0; font-weight: 700; text-align: right; }
+.confetti { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop { from { opacity: 0; transform: scale(.88) translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+@keyframes moved { 0% { box-shadow: 0 0 0 0 rgba(246,185,79,.8); border-color: var(--amber); } 100% { box-shadow: 0 0 0 12px rgba(246,185,79,0); } }
+@keyframes flicker { 0%,100% { opacity: 1; } 50% { opacity: .82; } }
+
+@media (max-width: 1040px) {
+  .board { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 4px 2px 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .board::-webkit-scrollbar { display: none; }
+  .house { flex: 0 0 min(76vw, 270px); scroll-snap-align: center; }
+  .dots { display: flex; }
+}
+@media (max-width: 720px) {
+  .hud { grid-template-columns: 1fr 1fr; }
+  .hud .tile.att { grid-column: 1 / -1; order: -1; }
+  .btn-ghost .lbl { display: none; }
+  .btn-ghost.reset .lbl { display: inline; }
+  .clue-list { grid-template-columns: 1fr; }
+  .timer { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<div class="glow" aria-hidden="true"></div>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var h = React.createElement;
+  var useState = React.useState, useEffect = React.useEffect, useRef = React.useRef, useCallback = React.useCallback;
+
+  /* ---------- puzzle data ---------- */
+  var CATS = [
+    { key: 'nat', label: 'Nationality', icon: 'flag', opts: ['British', 'Swedish', 'Spanish', 'American', 'German'] },
+    { key: 'col', label: 'Color', icon: 'palette', opts: ['Dark Brown', 'Red', 'Natural Wood', 'Black', 'White'] },
+    { key: 'drk', label: 'Drink', icon: 'cup', opts: ['Tea', 'Coffee', 'Milk', 'Beer', 'Wine'] },
+    { key: 'ins', label: 'Instrument', icon: 'music', opts: ['Violin', 'Saxophone', 'Drums', 'Trumpet', 'Piano'] },
+    { key: 'pet', label: 'Pet', icon: 'paw', opts: ['Dog', 'Bird', 'Cat', 'Horse', 'Fish'] }
+  ];
+  var HCOL = ['#6b4430', '#d9433f', '#d8b07a', '#1c1c26', '#f3f1ea'];
+  var SOL = {
+    nat: ['American', 'Spanish', 'British', 'German', 'Swedish'],
+    col: ['Black', 'White', 'Dark Brown', 'Red', 'Natural Wood'],
+    drk: ['Wine', 'Tea', 'Milk', 'Coffee', 'Beer'],
+    ins: ['Saxophone', 'Drums', 'Violin', 'Piano', 'Trumpet'],
+    pet: ['Cat', 'Horse', 'Bird', 'Fish', 'Dog']
+  };
+  var SOL_IDX = CATS.map(function (c) { return SOL[c.key].map(function (n) { return c.opts.indexOf(n); }); });
+  var CLUES = [
+    'The British man lives in a dark brown house.',
+    'The Swedish man owns a dog.',
+    'The Spanish man drinks tea.',
+    'The red house is on the left of the natural wood house.',
+    'The owner of the red house drinks coffee.',
+    'The person who plays violin owns a bird.',
+    'The owner of the black house plays the saxophone.',
+    'The man living in the centre house drinks milk.',
+    'The American lives in the first house.',
+    'The man who plays the drums lives next to the one who owns a cat.',
+    'The man who owns a horse lives next to the man who plays saxophone.',
+    'The man who plays the trumpet drinks beer.',
+    'The German plays the piano.',
+    'The American lives next to the white house.',
+    'The drum player lives next to the one who drinks wine.'
+  ];
+  var KEY = 'five-houses-v1';
+  var MUTE_KEY = 'five-houses-muted';
+
+  /* ---------- storage ---------- */
+  function emptyGrid() { return CATS.map(function () { return [-1, -1, -1, -1, -1]; }); }
+  function fresh(started) { return { grid: emptyGrid(), attempts: 2, status: 'playing', elapsed: 0, started: !!started, revealed: false, struck: [] }; }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return fresh(false);
+      var s = JSON.parse(raw);
+      var okGrid = Array.isArray(s.grid) && s.grid.length === 5 && s.grid.every(function (r) {
+        return Array.isArray(r) && r.length === 5 && r.every(function (v) { return v === -1 || (v >= 0 && v <= 4 && v % 1 === 0); });
+      });
+      if (!okGrid) return fresh(false);
+      var a = Number(s.attempts);
+      if (!(a >= 0 && a <= 2)) a = 2;
+      var st = s.status === 'won' || s.status === 'lost' ? s.status : 'playing';
+      if (a <= 0) st = 'lost';
+      return { grid: s.grid, attempts: a, status: st, elapsed: Math.max(0, Number(s.elapsed) || 0), started: !!s.started || st !== 'playing', revealed: !!s.revealed, struck: Array.isArray(s.struck) ? s.struck.filter(function (n) { return n >= 0 && n < 15; }) : [] };
+    } catch (e) { return fresh(false); }
+  }
+  function save(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+  function loadMuted() { try { return localStorage.getItem(MUTE_KEY) === '1'; } catch (e) { return false; } }
+
+  /* ---------- sound ---------- */
+  var ac = null;
+  function tone(f, d, type, t0, v) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || 'sine'; o.frequency.value = f;
+      var t = ac.currentTime + (t0 || 0);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(v || 0.06, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + d + 0.03);
+    } catch (e) {}
+  }
+  var SFX = {
+    click: function () { tone(540, 0.07, 'triangle'); },
+    pick: function () { tone(760, 0.06, 'sine', 0, 0.05); },
+    soft: function () { tone(330, 0.14, 'triangle', 0, 0.05); },
+    wrong: function () { tone(220, 0.22, 'sawtooth', 0, 0.045); tone(165, 0.34, 'sawtooth', 0.16, 0.045); },
+    win: function () { [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone(f, 0.3, 'triangle', i * 0.11, 0.06); }); }
+  };
+
+  /* ---------- icons ---------- */
+  var ICONS = {
+    chev: ['m6 9 6 6 6-6'],
+    check: ['M20 6 9 17l-5-5'],
+    clock: [{ c: [12, 12, 10] }, 'M12 6v6l4 2'],
+    reset: ['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5'],
+    vol: ['M11 5 6 9H2v6h4l5 4V5Z', 'M15.54 8.46a5 5 0 0 1 0 7.07', 'M19.07 4.93a10 10 0 0 1 0 14.14'],
+    volx: ['M11 5 6 9H2v6h4l5 4V5Z', 'm22 9-6 6', 'm16 9 6 6'],
+    flag: ['M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z', 'M4 22v-7'],
+    palette: ['M12 22a10 10 0 1 1 10-10c0 3-2 4-4 4h-2a2 2 0 0 0-1.5 3.3A2 2 0 0 1 12 22z', { c: [7.5, 11, 1] }, { c: [12, 7, 1] }, { c: [16.5, 10, 1] }],
+    cup: ['M10 2v2', 'M14 2v2', 'M6 2v2', 'M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1'],
+    music: ['M9 18V5l12-2v13', { c: [6, 18, 3] }, { c: [18, 16, 3] }],
+    paw: [{ c: [6.5, 10, 1.8] }, { c: [11, 5.5, 1.8] }, { c: [16, 6, 1.8] }, { c: [19.5, 11, 1.8] }, 'M12 12c-3 0-5.5 3-5.5 5.5 0 1.6 1.1 2.5 2.6 2.5 1 0 1.5-.5 2.9-.5s1.9.5 2.9.5c1.5 0 2.6-.9 2.6-2.5C17.5 15 15 12 12 12z'],
+    list: ['M8 6h13', 'M8 12h13', 'M8 18h13', 'M3 6h.01', 'M3 12h.01', 'M3 18h.01'],
+    trophy: ['M6 9H4.5a2.5 2.5 0 0 1 0-5H6', 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18', 'M4 22h16', 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22', 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22', 'M18 2H6v7a6 6 0 0 0 12 0V2Z'],
+    alert: ['m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z', 'M12 9v4', 'M12 17h.01'],
+    x: ['M18 6 6 18', 'm6 6 12 12'],
+    eye: ['M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z', { c: [12, 12, 3] }],
+    play: ['M6 3 20 12 6 21Z'],
+    home: ['m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-4v-7H8v7H4a1 1 0 0 1-1-1Z']
+  };
+  function Icon(p) {
+    var parts = ICONS[p.name] || [];
+    return h('svg', { width: p.size || 16, height: p.size || 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true', className: p.className || null, style: { flex: 'none' } },
+      parts.map(function (d, i) {
+        return typeof d === 'string' ? h('path', { key: i, d: d }) : h('circle', { key: i, cx: d.c[0], cy: d.c[1], r: d.c[2] });
+      }));
+  }
+
+  /* ---------- helpers ---------- */
+  function fmt(sec) {
+    var hh = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return (hh ? hh + ':' : '') + p(m) + ':' + p(s);
+  }
+
+  /* ---------- house artwork ---------- */
+  function HouseArt(p) {
+    var has = p.color >= 0, c = has ? HCOL[p.color] : 'rgba(255,255,255,0.06)';
+    var st = has ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.22)';
+    var dash = has ? null : '4 4';
+    var winFill = p.lit ? '#ffd37a' : 'rgba(255,255,255,0.14)';
+    return h('svg', { viewBox: '0 0 120 118', className: 'art', role: 'img', 'aria-label': has ? HOUSE_LABEL(p.color) : 'House with no color chosen yet' },
+      h('rect', { className: 'chim', x: 84, y: 14, width: 12, height: 28, rx: 2, fill: c, stroke: st, strokeWidth: 1.5, strokeDasharray: dash }),
+      h('polygon', { className: 'roof', points: '8,52 60,8 112,52', fill: c, stroke: st, strokeWidth: 1.5, strokeLinejoin: 'round', strokeDasharray: dash }),
+      has ? h('polygon', { points: '8,52 60,8 112,52', fill: 'rgba(0,0,0,0.3)', strokeLinejoin: 'round' }) : null,
+      h('rect', { className: 'wall', x: 18, y: 50, width: 84, height: 60, rx: 3, fill: c, stroke: st, strokeWidth: 1.5, strokeDasharray: dash }),
+      h('rect', { x: 52, y: 72, width: 16, height: 38, rx: 2, fill: 'rgba(0,0,0,0.38)' }),
+      h('circle', { cx: 64.5, cy: 92, r: 1.4, fill: 'rgba(255,255,255,0.7)' }),
+      h('rect', { className: 'win' + (p.lit ? ' lit' : ''), x: 27, y: 62, width: 18, height: 18, rx: 2, fill: winFill }),
+      h('rect', { className: 'win' + (p.lit ? ' lit' : ''), x: 75, y: 62, width: 18, height: 18, rx: 2, fill: winFill }),
+      h('line', { x1: 36, y1: 62, x2: 36, y2: 80, stroke: 'rgba(0,0,0,0.35)', strokeWidth: 1.2 }),
+      h('line', { x1: 84, y1: 62, x2: 84, y2: 80, stroke: 'rgba(0,0,0,0.35)', strokeWidth: 1.2 }));
+  }
+  function HOUSE_LABEL(ci) { return CATS[1].opts[ci] + ' house'; }
+
+  /* ---------- confetti ---------- */
+  function Confetti() {
+    var ref = useRef(null);
+    useEffect(function () {
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var c = ref.current; if (!c) return;
+      var x = c.getContext('2d'), dpr = Math.min(window.devicePixelRatio || 1, 2), w = 0, hh = 0;
+      function size() { w = window.innerWidth; hh = window.innerHeight; c.width = w * dpr; c.height = hh * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); }
+      size(); window.addEventListener('resize', size);
+      var cols = ['#f6b94f', '#ff8a4c', '#5fd3c5', '#ffffff', '#d9433f', '#8fb4ff', '#ffd37a'];
+      var P = [];
+      function burst(cx, cy, n, dir) {
+        for (var i = 0; i < n; i++) {
+          var a = (-Math.PI / 2) + dir * (0.25 + Math.random() * 0.55) + (Math.random() - 0.5) * 0.4;
+          var sp = 9 + Math.random() * 11;
+          P.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, w: 6 + Math.random() * 7, hh: 4 + Math.random() * 5, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, c: cols[(Math.random() * cols.length) | 0], t: Math.random() * 6 });
+        }
+      }
+      function rain(n) {
+        for (var i = 0; i < n; i++) P.push({ x: Math.random() * w, y: -20 - Math.random() * 200, vx: (Math.random() - 0.5) * 2, vy: 2 + Math.random() * 3, w: 6 + Math.random() * 7, hh: 4 + Math.random() * 5, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3, c: cols[(Math.random() * cols.length) | 0], t: Math.random() * 6 });
+      }
+      var t0 = performance.now(), fired = [false, false, false], raf;
+      function frame(now) {
+        var el = (now - t0) / 1000;
+        if (!fired[0]) { fired[0] = true; burst(0, hh, 90, 1); burst(w, hh, 90, -1); }
+        if (!fired[1] && el > 0.6) { fired[1] = true; burst(w * 0.2, hh, 60, 1); burst(w * 0.8, hh, 60, -1); }
+        if (!fired[2] && el > 1.2) { fired[2] = true; rain(120); }
+        x.clearRect(0, 0, w, hh);
+        for (var i = P.length - 1; i >= 0; i--) {
+          var p = P[i];
+          p.vy += 0.2; p.vx *= 0.992; p.vy *= 0.994; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.t += 0.12;
+          if (p.y > hh + 30) { P.splice(i, 1); continue; }
+          x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.scale(1, Math.cos(p.t));
+          x.fillStyle = p.c; x.fillRect(-p.w / 2, -p.hh / 2, p.w, p.hh); x.restore();
+        }
+        if (el < 3 || P.length) raf = requestAnimationFrame(frame);
+      }
+      raf = requestAnimationFrame(frame);
+      return function () { cancelAnimationFrame(raf); window.removeEventListener('resize', size); };
+    }, []);
+    return h('canvas', { ref: ref, className: 'confetti', 'aria-hidden': 'true' });
+  }
+
+  /* ---------- small components ---------- */
+  function Pips(p) {
+    var out = [];
+    for (var i = 0; i < p.total; i++) out.push(h('span', { key: i, className: 'pip' + (i < p.on ? '' : ' off') }));
+    return h('div', { className: 'pips' }, out);
+  }
+
+  function Modal(p) {
+    useEffect(function () {
+      function k(e) { if (e.key === 'Escape' && p.onClose) p.onClose(); }
+      window.addEventListener('keydown', k);
+      return function () { window.removeEventListener('keydown', k); };
+    }, [p.onClose]);
+    return h('div', { className: 'scrim', onMouseDown: function (e) { if (e.target === e.currentTarget && p.onClose) p.onClose(); } },
+      h('div', { className: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': p.label }, p.children));
+  }
+
+  function SolutionView() {
+    var cols = [];
+    for (var hi = 0; hi < 5; hi++) {
+      (function (hi) {
+        cols.push(h('div', { key: hi, className: 'house done' },
+          h('div', { className: 'house-head' }, h('div', { className: 'house-num' }, 'House', h('b', null, hi + 1))),
+          h(HouseArt, { color: SOL_IDX[1][hi], lit: true }),
+          h('dl', null, CATS.map(function (cat, ci) {
+            return h('div', { key: cat.key }, h('dt', null, h(Icon, { name: cat.icon, size: 12 }), cat.label), h('dd', null, cat.opts[SOL_IDX[ci][hi]]));
+          }))));
+      })(hi);
+    }
+    return h('div', { className: 'sol' }, cols);
+  }
+
+  function Cell(p) {
+    var cat = CATS[p.ci], val = p.grid[p.ci][p.hi], id = 'sel-' + p.ci + '-' + p.hi;
+    var cls = 'cell' + (val >= 0 ? ' filled' : '') + (p.flash && p.flash.ci === p.ci && p.flash.hi === p.hi ? ' flash' : '');
+    return h('label', { className: cls, htmlFor: id },
+      h('span', { className: 'cl' }, h(Icon, { name: cat.icon, size: 12 }), cat.label),
+      h('span', { className: 'sel' },
+        h('select', { id: id, value: val >= 0 ? String(val) : '', onChange: function (e) { p.onSet(p.ci, p.hi, e.target.value === '' ? -1 : parseInt(e.target.value, 10)); } },
+          h('option', { value: '' }, 'Select…'),
+          cat.opts.map(function (o, oi) {
+            var used = p.grid[p.ci].indexOf(oi);
+            return h('option', { key: oi, value: String(oi) }, o + (used >= 0 && used !== p.hi ? '  · House ' + (used + 1) : ''));
+          })),
+        h('span', { className: 'ic' }, h(Icon, { name: val >= 0 ? 'check' : 'chev', size: 16 }))));
+  }
+
+  function HouseCol(p) {
+    var hi = p.hi, count = 0;
+    for (var ci = 0; ci < 5; ci++) if (p.grid[ci][hi] >= 0) count++;
+    var done = count === 5;
+    return h('section', { className: 'house' + (done ? ' done' : '') + (p.shake ? ' shake' : ''), style: { animationDelay: (hi * 70) + 'ms' }, 'data-house': hi, 'aria-label': 'House ' + (hi + 1) },
+      h('div', { className: 'house-head' },
+        h('div', { className: 'house-num' }, 'House', h('b', null, hi + 1)),
+        h('div', { className: 'house-count' }, count + '/5')),
+      h(HouseArt, { color: p.grid[1][hi], lit: done }),
+      h('div', { className: 'cells' }, CATS.map(function (cat, ci) {
+        return h(Cell, { key: cat.key, ci: ci, hi: hi, grid: p.grid, onSet: p.onSet, flash: p.flash });
+      })));
+  }
+
+  function Clues(p) {
+    return h('div', { className: 'clues' },
+      h('button', { className: 'clues-head', onClick: p.onToggle, 'aria-expanded': p.open, 'aria-controls': 'clue-body' },
+        h('span', { className: 't' }, h(Icon, { name: 'list', size: 18 }), 'The Clues', h('span', { className: 'sub' }, p.struck.length + ' of 15 crossed off')),
+        h(Icon, { name: 'chev', size: 20, className: 'chev' + (p.open ? ' open' : '') })),
+      h('div', { className: 'clues-body' + (p.open ? ' open' : ''), id: 'clue-body' },
+        h('div', null,
+          h('ul', { className: 'clue-list' }, CLUES.map(function (t, i) {
+            var s = p.struck.indexOf(i) >= 0;
+            return h('li', { key: i }, h('button', { className: 'clue' + (s ? ' struck' : ''), onClick: function () { p.onStrike(i); }, 'aria-pressed': s, title: 'Tap to cross off or restore' },
+              h('span', { className: 'n' }, i + 1), h('span', { className: 'tx' }, t)));
+          })),
+          h('div', { className: 'clues-note' }, 'Tap a clue to cross it off once you have used it. “Next to” means the houses sit directly beside each other.'))));
+  }
+
+  /* ---------- app ---------- */
+  function App() {
+    var st = useState(load), s = st[0], setS = st[1];
+    var sRef = useRef(s); sRef.current = s;
+    var mu = useState(loadMuted), muted = mu[0], setMuted = mu[1];
+    var mRef = useRef(muted); mRef.current = muted;
+    var md = useState(null), modal = md[0], setModal = md[1];
+    var ts = useState(null), toast = ts[0], setToast = ts[1];
+    var oc = useState(function () { return window.innerWidth > 760; }), openClues = oc[0], setOpenClues = oc[1];
+    var fl = useState(null), flash = fl[0], setFlash = fl[1];
+    var sk = useState([]), shake = sk[0], setShake = sk[1];
+    var board = useRef(null);
+    var toastTimer = useRef(null);
+
+    var commit = useCallback(function (fn) { var next = fn(sRef.current); sRef.current = next; save(next); setS(next); }, []);
+    var play = function (n) { if (!mRef.current) SFX[n](); };
+    var say = function (msg, kind) {
+      setToast({ msg: msg, kind: kind || 'info', k: Date.now() });
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(function () { setToast(null); }, 3600);
+    };
+
+    var playing = s.started && s.status === 'playing';
+    useEffect(function () {
+      if (!playing) return;
+      var id = setInterval(function () { if (!document.hidden) commit(function (p) { return Object.assign({}, p, { elapsed: p.elapsed + 1 }); }); }, 1000);
+      return function () { clearInterval(id); };
+    }, [playing, commit]);
+
+    function setCell(ci, hi, val) {
+      var cur = sRef.current;
+      if (cur.status !== 'playing') return;
+      var moved = -1;
+      if (val >= 0) for (var i = 0; i < 5; i++) if (i !== hi && cur.grid[ci][i] === val) moved = i;
+      commit(function (p) {
+        var g = p.grid.map(function (r) { return r.slice(); });
+        if (moved >= 0) g[ci][moved] = -1;
+        g[ci][hi] = val;
+        return Object.assign({}, p, { grid: g });
+      });
+      play('pick');
+      if (moved >= 0) {
+        setFlash({ ci: ci, hi: moved });
+        setTimeout(function () { setFlash(null); }, 1200);
+        say(CATS[ci].opts[val] + ' moved here from House ' + (moved + 1) + '.');
+      }
+    }
+
+    function scrollToHouse(i) {
+      var b = board.current; if (!b) return;
+      var el = b.querySelector('[data-house="' + i + '"]'); if (!el) return;
+      b.scrollTo({ left: el.offsetLeft - (b.clientWidth - el.clientWidth) / 2, behavior: 'smooth' });
+    }
+
+    function check() {
+      var cur = sRef.current;
+      if (cur.status !== 'playing') return;
+      var missing = [], empties = 0;
+      for (var hi = 0; hi < 5; hi++) {
+        var m = 0;
+        for (var ci = 0; ci < 5; ci++) if (cur.grid[ci][hi] < 0) m++;
+        if (m) { missing.push(hi); empties += m; }
+      }
+      if (missing.length) {
+        play('soft');
+        setShake(missing); setTimeout(function () { setShake([]); }, 700);
+        scrollToHouse(missing[0]);
+        say('Complete every house first. ' + empties + (empties === 1 ? ' selection is' : ' selections are') + ' still empty. No attempt used.', 'warn');
+        return;
+      }
+      var ok = CATS.every(function (_, ci) { return SOL_IDX[ci].every(function (v, hi) { return cur.grid[ci][hi] === v; }); });
+      if (ok) {
+        commit(function (p) { return Object.assign({}, p, { status: 'won' }); });
+        play('win');
+        window.scrollTo(0, 0);
+      } else {
+        var left = cur.attempts - 1;
+        commit(function (p) { return Object.assign({}, p, { attempts: left, status: left <= 0 ? 'lost' : 'playing' }); });
+        play('wrong');
+        if (left > 0) setModal('wrong'); else window.scrollTo(0, 0);
+      }
+    }
+
+    function resetPuzzle() {
+      commit(function (p) { return Object.assign({}, p, { grid: emptyGrid(), elapsed: 0, struck: [] }); });
+      setModal(null); play('click'); say('Puzzle cleared. Your remaining attempts are unchanged.');
+    }
+    function newGame() { play('click'); commit(function () { return fresh(true); }); setModal(null); window.scrollTo(0, 0); }
+    function strike(i) {
+      play('click');
+      commit(function (p) { var a = p.struck.slice(), k = a.indexOf(i); if (k >= 0) a.splice(k, 1); else a.push(i); return Object.assign({}, p, { struck: a }); });
+    }
+    function toggleMute() { var n = !muted; setMuted(n); try { localStorage.setItem(MUTE_KEY, n ? '1' : '0'); } catch (e) {} if (!n) setTimeout(function () { SFX.click(); }, 30); }
+
+    var filled = s.grid.reduce(function (a, r) { return a + r.filter(function (v) { return v >= 0; }).length; }, 0);
+
+    /* landing */
+    if (!s.started && s.status === 'playing') {
+      var demo = [1, 2, 4, 0, 3];
+      return h('div', { className: 'wrap' }, h('main', { className: 'landing' },
+        h('div', { className: 'street', 'aria-hidden': 'true' }, demo.map(function (c, i) {
+          return h('div', { key: i, className: 'art-wrap', style: { animationDelay: (i * 110) + 'ms', marginBottom: (i % 2 ? 0 : 14) + 'px' } }, h(HouseArt, { color: c, lit: i % 2 === 0 }));
+        })),
+        h('h1', { className: 'title' }, 'The ', h('em', null, 'Five'), h('br'), 'Houses'),
+        h('p', { className: 'sub' }, 'Can you solve Einstein’s legendary logic puzzle?'),
+        h('button', { className: 'btn-main', onClick: function () { play('click'); commit(function (p) { return Object.assign({}, p, { started: true }); }); } }, h(Icon, { name: 'play', size: 18 }), 'Start Challenge'),
+        h('div', { className: 'only' }, '2 ATTEMPTS ONLY', h(Pips, { total: 2, on: 2 })),
+        h('div', { className: 'facts' }, h('span', null, h('b', null, '5'), ' houses'), h('span', null, h('b', null, '15'), ' clues'), h('span', null, h('b', null, '25'), ' answers'), h('span', null, h('b', null, '1'), ' solution'))));
+    }
+
+    /* won */
+    if (s.status === 'won') {
+      return h('div', { className: 'wrap' }, h(Confetti),
+        h('main', { className: 'result' },
+          h('div', { className: 'brand' }, h('i'), 'The Five Houses'),
+          h('h1', { className: 'win' }, 'You won!'),
+          h('p', { className: 'lead' }, 'Every house is in order. Einstein would approve.'),
+          h('div', { className: 'stats' },
+            h('div', { className: 'stat' }, h('div', { className: 'k' }, 'Time'), h('div', { className: 'v' }, fmt(s.elapsed))),
+            h('div', { className: 'stat' }, h('div', { className: 'k' }, 'Solved on'), h('div', { className: 'v' }, s.attempts === 2 ? 'Attempt 1' : 'Attempt 2'))),
+          h(SolutionView),
+          h('button', { className: 'btn-main sm', onClick: newGame }, h(Icon, { name: 'reset', size: 18 }), 'Play Again')));
+    }
+
+    /* lost */
+    if (s.status === 'lost') {
+      return h('div', { className: 'wrap' },
+        h('main', { className: 'result' },
+          h('div', { className: 'brand' }, h('i'), 'The Five Houses'),
+          h('h1', { className: 'lose' }, 'Game over!'),
+          h('p', { className: 'lead' }, 'You’ve used all your attempts.'),
+          h(Pips, { total: 2, on: 0 }),
+          s.revealed ? h('div', { style: { width: '100%' } },
+            h('p', { className: 'lead', style: { fontSize: 15, marginBottom: 10 } }, 'The correct solution'),
+            h(SolutionView)) : null,
+          s.revealed
+            ? h('button', { className: 'btn-line', onClick: newGame }, 'Start a New Game')
+            : h('button', { className: 'btn-main sm', onClick: function () { play('click'); commit(function (p) { return Object.assign({}, p, { revealed: true }); }); } }, h(Icon, { name: 'eye', size: 18 }), 'Reveal Solution')));
+    }
+
+    /* game */
+    return h('div', { className: 'wrap' },
+      h('header', { className: 'top' },
+        h('div', { className: 'brand' }, h('i'), 'The Five Houses'),
+        h('div', { className: 'top-actions' },
+          h('button', { className: 'btn-ghost icon', onClick: toggleMute, 'aria-label': muted ? 'Turn sound on' : 'Turn sound off', title: muted ? 'Sound off' : 'Sound on' }, h(Icon, { name: muted ? 'volx' : 'vol', size: 17 })),
+          h('button', { className: 'btn-ghost reset', onClick: function () { play('click'); setModal('reset'); } }, h(Icon, { name: 'reset', size: 15 }), h('span', { className: 'lbl' }, 'RESET PUZZLE')))),
+      h('div', { className: 'hud' },
+        h('div', { className: 'tile' }, h('div', { className: 'k' }, h(Icon, { name: 'clock', size: 13 }), 'Time'), h('div', { className: 'timer', role: 'timer' }, fmt(s.elapsed))),
+        h('div', { className: 'tile att' }, h('div', { className: 'att-l' }, 'ATTEMPTS REMAINING:', h('b', null, s.attempts)), h(Pips, { total: 2, on: s.attempts })),
+        h('div', { className: 'tile' }, h('div', { className: 'k' }, 'Progress'), h('div', { className: 'prog-n' }, filled, h('span', null, ' / 25')), h('div', { className: 'bar' }, h('div', { style: { width: (filled / 25 * 100) + '%' } })))),
+      h(Clues, { open: openClues, onToggle: function () { play('click'); setOpenClues(!openClues); }, struck: s.struck, onStrike: strike }),
+      h('div', { className: 'dots', role: 'group', 'aria-label': 'Jump to house' }, [0, 1, 2, 3, 4].map(function (i) {
+        var c = 0; for (var ci = 0; ci < 5; ci++) if (s.grid[ci][i] >= 0) c++;
+        return h('button', { key: i, className: 'dot' + (c === 5 ? ' on' : c > 0 ? ' part' : ''), onClick: function () { scrollToHouse(i); }, 'aria-label': 'House ' + (i + 1) + ', ' + c + ' of 5 chosen' }, i + 1);
+      })),
+      h('div', { className: 'board-wrap' }, h('div', { className: 'board', ref: board }, [0, 1, 2, 3, 4].map(function (hi) {
+        return h(HouseCol, { key: hi, hi: hi, grid: s.grid, onSet: setCell, flash: flash, shake: shake.indexOf(hi) >= 0 });
+      }))),
+      h('div', { className: 'finish-wrap' },
+        h('button', { className: 'btn-main', onClick: function () { play('click'); check(); } }, h(Icon, { name: 'check', size: 20 }), 'Finish & Check Answers'),
+        h('div', { className: 'hint' }, filled === 25 ? 'All 25 answers chosen. Wrong answers cost one of your ' + s.attempts + ' remaining attempts.' : (25 - filled) + ' answers left to choose before you can check.')),
+
+      modal === 'wrong' ? h(Modal, { label: 'Incorrect solution', onClose: function () { setModal(null); } },
+        h('div', { className: 'badge' }, h(Icon, { name: 'x', size: 30 })),
+        h('h2', null, 'NOT QUITE!'),
+        h('p', null, 'Try again.'),
+        h('div', { className: 'left' }, 'ATTEMPTS REMAINING: ' + s.attempts),
+        h('div', { className: 'row' }, h('button', { className: 'btn-main sm', autoFocus: true, onClick: function () { play('click'); setModal(null); } }, 'Keep Solving'))) : null,
+      modal === 'reset' ? h(Modal, { label: 'Confirm reset', onClose: function () { setModal(null); } },
+        h('div', { className: 'badge warn' }, h(Icon, { name: 'alert', size: 28 })),
+        h('h2', null, 'Reset puzzle?'),
+        h('p', null, 'All your selections and the timer will be cleared. Attempts already used stay used.'),
+        h('div', { className: 'row' },
+          h('button', { className: 'btn-line', autoFocus: true, onClick: function () { play('click'); setModal(null); } }, 'Cancel'),
+          h('button', { className: 'btn-main sm', onClick: resetPuzzle }, 'Yes, Reset'))) : null,
+      toast ? h('div', { className: 'toast ' + toast.kind, role: 'status', 'aria-live': 'polite', key: toast.k }, toast.kind === 'warn' ? h(Icon, { name: 'alert', size: 18 }) : null, toast.msg) : null);
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+})();
+</script>
+
+</body></html>
